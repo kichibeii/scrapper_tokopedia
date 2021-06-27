@@ -173,7 +173,7 @@ func crawl(month int, day int) []Data {
 
 		var imageLink []string
 		e.ForEach("div.css-1aplawl", func(_ int, kf *colly.HTMLElement) {
-			linkImage := kf.ChildAttr("div.css-19i5z4j > img.success", "src")
+			linkImage := kf.ChildAttr("div.css-19i5z4j > img", "src")
 			imageLink = append(imageLink, linkImage)
 		})
 

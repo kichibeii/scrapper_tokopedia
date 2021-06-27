@@ -3,4 +3,4 @@ this for scrapper tokopedia website
 
 
 # INFO
-this scrapper is still not working 
+not get for image_link, rating and store name 
