@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/csv"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -25,8 +24,7 @@ type Data struct {
 }
 
 func main() {
-	datas := straw()
-	// datas := scrawlData()
+	datas := crawlData()
 
 	writeDataToCSV(datas)
 }
@@ -50,126 +48,33 @@ func writeDataToCSV(datas []Data) {
 	csvFile.Close()
 }
 
-func scrawlData() []Data {
-	// create data
+func crawlData() []Data {
+	// make new variable's array of data
 	allDatas := make([]Data, 0)
 
-	// init collector
-	collector := colly.NewCollector(
-		colly.AllowedDomains("www.tokopedia.com", "tokopedia.com"),
-		colly.UserAgent("xy"),
-
-		// for  debugging
-		// colly.Debugger(&debug.LogDebugger{}),
-	)
-
-	// collector for product page
-	infoCollector := collector.Clone()
-
-	// get link of product
-	collector.OnHTML("a[href]", func(element *colly.HTMLElement) {
-		profileURL := element.Attr("href")
-
-		//check correct link
-		s := strings.Split(profileURL, ".")
-		if s[0] == "https://ta" {
-			url := getRealIP(profileURL)
-			infoCollector.Visit(url)
-		}
-	})
-
-	// get data that needed
-	infoCollector.OnHTML("#main-pdp-container", func(element *colly.HTMLElement) {
-		productName := element.ChildText("h1.css-1wtrxts")
-		description := element.ChildText(".css-168ydy0 e1iszlzh1")
-		Price := element.ChildAttr(".css-aqsd8m", "div")
-		rating := element.ChildText("#lblPDPDetailProductRatingNumber")
-		nameShop := element.ChildAttr(".css-1n8curp", "h2")
-
-		var imageLink []string
-		element.ForEach("div.css-1aplawl", func(_ int, kf *colly.HTMLElement) {
-			linkImage := kf.ChildAttr("div.css-19i5z4j > img.success fade", "src")
-			imageLink = append(imageLink, linkImage)
-		})
-
-		allDatas = append(allDatas, Data{
-			ProductName: productName,
-			Description: description,
-			Price:       Price,
-			Rating:      rating,
-			ImageLink:   imageLink,
-			NameOfStore: nameShop,
-		})
-	})
-
-	collector.OnRequest(func(request *colly.Request) {
-		fmt.Println("Visiting ", request.URL.String())
-	})
-
-	infoCollector.OnRequest(func(request *colly.Request) {
-		fmt.Println("infoCollector visiting ", request.URL.String())
-	})
-
-	collector.Visit("https://tokopedia.com/p/handphone-tablet/handphone?page=1")
-
-	return allDatas
-}
-
-// function for get specified IP
-func getRealIP(fakeIP string) string {
-	s := strings.Split(fakeIP, "%2F")
-	domain := s[2]
-	store := s[3]
-	productLink := s[4]
-	productLinks := strings.Split(productLink, "%3F")
-
-	return fmt.Sprintf("%s/%s/%s", domain, store, productLinks[0])
-}
-
-type movie struct {
-	Title string
-	Year  string
-}
-type star struct {
-	Name      string
-	Photo     string
-	JobTitle  string
-	BirthDate string
-	Bio       string
-	TopMovies []movie
-}
-
-func straw() []Data {
-	month := flag.Int("month", 1, "Month to fetch birthdays for")
-	day := flag.Int("day", 1, "Day to fetch birthdays for")
-	flag.Parse()
-	datas := crawl(*month, *day)
-	return datas
-}
-
-func crawl(month int, day int) []Data {
-	allDatas := make([]Data, 0)
+	// new collector Colly
 	c := colly.NewCollector(
-		// using async makes you lose the sort order
-		// colly.Async(true)
 		colly.AllowedDomains("www.tokopedia.com", "tokopedia.com"),
 		colly.UserAgent("xy"),
 	)
 
+	// make clone for get product page
 	infoCollector := c.Clone()
 
+	// get link product page
 	c.OnHTML(".e1nlzfl3", func(e *colly.HTMLElement) {
 		profileUrl := e.ChildAttr("a", "href")
 		profileUrl = e.Request.AbsoluteURL(profileUrl)
 		infoCollector.Visit(profileUrl)
 	})
 
+	// get data
 	infoCollector.OnHTML("#main-pdp-container", func(e *colly.HTMLElement) {
 		productName := e.ChildText("h1.css-1wtrxts")
 		description := e.ChildText("span.css-168ydy0")
 		Price := e.ChildText("div.price")
-		rating := e.ChildText("#lblPDPDetailProductRatingNumber")
-		nameShop := e.ChildText("a.css-1n8curp > h2")
+		rating := e.ChildText("h5.css-zeq6c8 > span")
+		nameShop := e.ChildAttr("a.css-1n8curp", "href")
 
 		var imageLink []string
 		e.ForEach("div.css-1aplawl", func(_ int, kf *colly.HTMLElement) {
@@ -202,5 +107,6 @@ func crawl(month int, day int) []Data {
 		log.Fatal(err)
 	}
 	fmt.Println(string(js))
+
 	return allDatas
 }
